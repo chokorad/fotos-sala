@@ -1,8 +1,8 @@
 // Configuración de Firebase (estos valores NO son secretos: la seguridad la dan las reglas de Firestore
 // y el código familiar que va en el link, no en este archivo).
 window.FOTOS_CONFIG = {
-  projectId: "PEGA_AQUI_TU_PROJECT_ID",
-  apiKey: "PEGA_AQUI_TU_API_KEY",
+  projectId: "fotos-sala-b2ff0",
+  apiKey: "AIzaSyARskmv80s2Axhud2Z2SgxlB36pxAZP6iE",
 
   // Pantalla de la iPad
   intervaloSegundos: 60,   // cada cuántos segundos cambia la foto

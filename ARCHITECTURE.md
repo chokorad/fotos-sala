@@ -43,7 +43,7 @@ The code travels in the URL fragment: `.../#c=<code>`. Pages read it, store it i
 6. At ~04:00 the page calls `location.reload()` (at most once per 3 h of uptime) to avoid memory creep.
 
 ## External services and secrets
-- Firebase project (Spark plan): holds Firestore. Config values go in `config.js` (`projectId`, `apiKey`: public web key, not a secret).
+- Firebase project `fotos-sala-b2ff0` (Spark plan): holds Firestore database `(default)`, edition Standard, location nam5. Web app `fotos-sala-web` is registered only to obtain the API key. Config values go in `config.js` (`projectId`, `apiKey`: public web key, not a secret).
 - GitHub Pages: static hosting.
 - No server code, no Cloud Functions, no Storage bucket.
 - Free-tier limits to remember: 1 GiB stored (~3,000 photos at ~330 KB each), 50K reads/day, 20K writes/day, 10 GiB/month egress. If exceeded, upgrade to Blaze (needs card) or delete photos.

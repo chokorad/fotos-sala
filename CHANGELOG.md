@@ -1,5 +1,12 @@
 # CHANGELOG (newest first)
 
+## 2026-11-09 — Firebase connected
+- Created Firebase project `fotos-sala-b2ff0` (Spark plan, no Analytics, no Gemini), Firestore (Standard edition, production mode, location nam5, database `(default)`), and a web app `fotos-sala-web`.
+- Published the security rules (same content as `firestore.rules.example` with the real family code in place of `FAMILY_CODE_HERE`).
+- Filled `projectId` and `apiKey` in `config.js` (public web key by design).
+- Bumped service worker cache `fotos-sala-v2` -> `fotos-sala-v3` because `config.js` changed.
+- Verified against the real REST API: create 200, list 200, get 200, delete 200; write to another collection 403; extra field 403. Test document removed.
+
 ## 2026-11-09 — New app icon
 - Replaced `icon-180.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` with the icon Mario supplied (neon camera + heart + family figures). Cropped to a 930 px opaque square inside the rounded corners, no transparency, so Android does not add a white ring.
 - Bumped service worker cache `fotos-sala-v1` -> `fotos-sala-v2` in `sw.js`.

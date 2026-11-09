@@ -1,9 +1,9 @@
 # TODO
 
 ## Open items (nothing here was requested by the user unless marked)
-- [ ] Not yet tested on the real iPad (iOS 9.3.6) or against the real Firebase project. First run should confirm: photos load, cross-fade works, home-screen icon opens fullscreen.
+- [ ] Not yet tested on the real iPad (iOS 9.3.6). REST calls were verified against the real Firebase project from desktop Chrome. First run should confirm: photos load, cross-fade works, home-screen icon opens fullscreen.
 - [ ] Not yet tested on real phones (iPhone Safari and Android Chrome) for upload and PWA install.
-- [ ] Mario must create the Firebase project, publish `firestore.rules`, and fill in `projectId` and `apiKey` in `config.js` (see `LEEME.md`).
+- [x] Firebase project, rules and `config.js` values done on 2026-11-09 (see CHANGELOG).
 
 ## Ideas (not requested)
 - Show a small "N fotos" counter or last-upload time in the gallery.
