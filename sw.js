@@ -1,6 +1,6 @@
 // Service worker mínimo: guarda la app para abrirla rápido y poder instalarla.
 // Nunca toca las llamadas a Firebase (siempre van a la red).
-var CACHE = 'fotos-sala-v3';
+var CACHE = 'fotos-sala-v4';
 var ARCHIVOS = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png'];
 
 self.addEventListener('install', function (e) {

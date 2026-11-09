@@ -1,5 +1,10 @@
 # CHANGELOG (newest first)
 
+## 2026-11-09 — Blurred background + new manifest id
+- `pantalla.html`: each layer now has a `.fondo` div (same photo, `cover`, blur 28px, brightness .7, scale 1.25) behind a `.frente` div (`contain`), so portrait photos no longer show black side bars. ES5 preserved. Toggle with `fondoDifuso: false` in `config.js` (hides the blur if the old iPad is slow).
+- `manifest.webmanifest`: added `"id": "/fotos-sala/app"` because Chrome on Mario's phone held a stale WebAPK record ("already installed" / "Could not open app"). A new id makes Chrome treat it as a new app.
+- Bumped service worker cache `fotos-sala-v3` -> `fotos-sala-v4`.
+
 ## 2026-11-09 — Firebase connected
 - Created Firebase project `fotos-sala-b2ff0` (Spark plan, no Analytics, no Gemini), Firestore (Standard edition, production mode, location nam5, database `(default)`), and a web app `fotos-sala-web`.
 - Published the security rules (same content as `firestore.rules.example` with the real family code in place of `FAMILY_CODE_HERE`).

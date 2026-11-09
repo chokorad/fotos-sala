@@ -8,5 +8,6 @@ window.FOTOS_CONFIG = {
   intervaloSegundos: 60,   // cada cuántos segundos cambia la foto
   horaEncender: 7,         // la pantalla se apaga (negro) de noche: desde esta hora se muestran fotos
   horaApagar: 23,          // ...hasta esta hora (formato 24 h)
-  revisarNuevasMin: 5      // cada cuántos minutos busca fotos nuevas
+  revisarNuevasMin: 5,     // cada cuántos minutos busca fotos nuevas
+  fondoDifuso: true        // fondo difuminado con los colores de la foto (false = barras negras)
 };

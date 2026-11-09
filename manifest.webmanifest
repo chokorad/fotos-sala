@@ -2,6 +2,7 @@
   "name": "Fotos de la sala",
   "short_name": "Fotos sala",
   "description": "Sube fotos a la pantalla de la casa",
+  "id": "/fotos-sala/app",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
