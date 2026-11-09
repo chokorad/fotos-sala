@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Fotos de la sala</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Fotos">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+  body { -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0);
+         font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .capa { position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background-color: #000; background-repeat: no-repeat; background-position: center center;
+          -webkit-background-size: contain; background-size: contain;
+          opacity: 0;
+          -webkit-transition: opacity 1.6s ease-in-out; transition: opacity 1.6s ease-in-out; }
+  .capa.visible { opacity: 1; }
+  #autor { position: fixed; left: 22px; bottom: 18px; color: #fff; font-size: 22px; letter-spacing: .5px;
+           text-shadow: 0 1px 6px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); opacity: 0;
+           -webkit-transition: opacity 1.2s; transition: opacity 1.2s; }
+  #autor.visible { opacity: .85; }
+  #mensaje { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: none;
+             color: #bbb; text-align: center; padding: 0 12%; }
+  #mensaje .centro { position: absolute; top: 50%; left: 0; right: 0; margin-top: -90px; }
+  #mensaje h1 { font-size: 38px; font-weight: 300; margin: 0 0 14px 0; color: #eee; }
+  #mensaje p { font-size: 22px; line-height: 1.4; margin: 0; }
+</style>
+</head>
+<body>
+<div class="capa" id="capaA"></div>
+<div class="capa" id="capaB"></div>
+<div id="autor"></div>
+<div id="mensaje"><div class="centro"><h1 id="msgTitulo"></h1><p id="msgTexto"></p></div></div>
+
+<script src="config.js"></script>
+<script>
+/* ===== Pantalla de fotos — ES5 puro, sin librerías, para Safari de iOS 9 ===== */
+(function () {
+  'use strict';
+
+  var CFG = window.FOTOS_CONFIG || {};
+  var API = 'https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents';
+  var KEY = '?key=' + encodeURIComponent(CFG.apiKey || '');
+
+  // ---------- código familiar (colección) ----------
+  function leerCodigo() {
+    var m = /[#&?]c=([A-Za-z0-9_]+)/.exec(location.hash || '');
+    var cod = m ? m[1] : null;
+    try {
+      if (cod) { window.localStorage.setItem('fs_code', cod); }
+      else { cod = window.localStorage.getItem('fs_code'); }
+    } catch (e) { /* modo privado: ignorar */ }
+    return cod;
+  }
+  var COL = leerCodigo();
+
+  // ---------- utilidades ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var capas = [$('capaA'), $('capaB')];
+  var autor = $('autor');
+  var activa = 0;
+
+  function mensaje(titulo, texto) {
+    var m = $('mensaje');
+    if (!titulo) { m.style.display = 'none'; return; }
+    $('msgTitulo').textContent = titulo;
+    $('msgTexto').textContent = texto || '';
+    m.style.display = 'block';
+  }
+
+  function xhr(metodo, url, cuerpo, cb) {
+    var done = false;
+    var r = new XMLHttpRequest();
+    r.open(metodo, url, true);
+    r.timeout = 40000;
+    if (cuerpo) { r.setRequestHeader('Content-Type', 'application/json'); }
+    function fin(err, data) { if (done) { return; } done = true; cb(err, data); }
+    r.onload = function () {
+      var data = null;
+      try { data = JSON.parse(r.responseText); } catch (e) { /* vacío */ }
+      if (r.status >= 200 && r.status < 300) { fin(null, data); }
+      else { fin({ status: r.status, data: data }); }
+    };
+    r.onerror = function () { fin({ status: 0 }); };
+    r.ontimeout = function () { fin({ status: 0 }); };
+    r.send(cuerpo ? JSON.stringify(cuerpo) : null);
+  }
+
+  function aleatorio(n) { return Math.floor(Math.random() * n); }
+
+  function barajar(arr) {
+    var a = arr.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--) { j = aleatorio(i + 1); t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  // ---------- lista de fotos (solo id y fecha; el contenido se baja bajo demanda) ----------
+  var ids = [];          // todos los ids conocidos
+  var vistos = {};       // id -> true
+  var nuevas = [];       // fotos recién llegadas: se muestran primero
+  var baraja = [];       // mazo aleatorio actual
+  var maxT = 0;          // fecha de la foto más reciente conocida
+  var ultimoId = null;
+
+  function consultar(desdeT, limite, cb) {
+    var cuerpo = {
+      structuredQuery: {
+        from: [{ collectionId: COL }],
+        select: { fields: [{ fieldPath: 't' }] },
+        where: { fieldFilter: { field: { fieldPath: 't' }, op: 'GREATER_THAN', value: { integerValue: String(desdeT) } } },
+        orderBy: [{ field: { fieldPath: 't' }, direction: 'DESCENDING' }],
+        limit: limite
+      }
+    };
+    xhr('POST', API + ':runQuery' + KEY, cuerpo, function (err, data) {
+      if (err) { cb(err); return; }
+      var out = [], i, d, partes, t;
+      for (i = 0; data && i < data.length; i++) {
+        d = data[i].document;
+        if (!d) { continue; }
+        partes = d.name.split('/');
+        t = (d.fields && d.fields.t && d.fields.t.integerValue) ? parseInt(d.fields.t.integerValue, 10) : 0;
+        out.push({ id: partes[partes.length - 1], t: t });
+      }
+      cb(null, out);   // vienen de la más nueva a la más vieja
+    });
+  }
+
+  function agregar(lista, comoNuevas) {
+    var i, f, aNuevas = [];
+    for (i = 0; i < lista.length; i++) {
+      f = lista[i];
+      if (f.t > maxT) { maxT = f.t; }
+      if (vistos[f.id]) { continue; }
+      vistos[f.id] = true;
+      ids.push(f.id);
+      if (comoNuevas) { aNuevas.push(f.id); }
+    }
+    // la más nueva primero
+    nuevas = aNuevas.concat(nuevas);
+  }
+
+  function cargarTodo(cb) {
+    consultar(0, 5000, function (err, lista) {
+      if (err) { cb(err); return; }
+      agregar(lista, false);
+      cb(null);
+    });
+  }
+
+  function buscarNuevas() {
+    if (!COL) { return; }
+    consultar(maxT, 200, function (err, lista) {
+      if (!err && lista.length) { agregar(lista, true); if (ids.length && !corriendo) { arrancar(); } }
+    });
+  }
+
+  function siguienteId() {
+    var id;
+    if (nuevas.length) { return nuevas.shift(); }
+    if (!ids.length) { return null; }
+    if (!baraja.length) {
+      baraja = barajar(ids);
+      if (baraja.length > 1 && baraja[baraja.length - 1] === ultimoId) {
+        id = baraja.pop(); baraja.unshift(id);   // evita repetir la misma foto al cambiar de mazo
+      }
+    }
+    return baraja.pop();
+  }
+
+  function quitar(id) {
+    var i;
+    for (i = 0; i < ids.length; i++) { if (ids[i] === id) { ids.splice(i, 1); break; } }
+    for (i = 0; i < baraja.length; i++) { if (baraja[i] === id) { baraja.splice(i, 1); break; } }
+    for (i = 0; i < nuevas.length; i++) { if (nuevas[i] === id) { nuevas.splice(i, 1); break; } }
+  }
+
+  // ---------- bajar una foto ----------
+  function bajarFoto(id, cb) {
+    xhr('GET', API + '/' + COL + '/' + id + KEY, null, function (err, d) {
+      if (err) { cb(err); return; }
+      var f = d && d.fields;
+      if (!f || !f.img || !f.img.stringValue) { cb({ status: 404 }); return; }
+      cb(null, { id: id, img: f.img.stringValue, n: (f.n && f.n.stringValue) || '' });
+    });
+  }
+
+  // intenta hasta 4 fotos distintas (por si alguna fue borrada)
+  function prepararSiguiente(cb, intento) {
+    intento = intento || 0;
+    var id = siguienteId();
+    if (!id) { cb(null); return; }
+    bajarFoto(id, function (err, foto) {
+      if (!err) { cb(foto); return; }
+      if (err.status === 404) { quitar(id); }
+      if (intento < 3) { prepararSiguiente(cb, intento + 1); } else { cb(null); }
+    });
+  }
+
+  // ---------- mostrar ----------
+  var autorTimer = null;
+
+  function mostrar(foto) {
+    var vieja = capas[activa];
+    var nueva = capas[1 - activa];
+    ultimoId = foto.id;
+    nueva.style.backgroundImage = 'url("' + foto.img + '")';
+    // pequeño retraso para que el navegador pinte la imagen antes de hacer el fundido
+    setTimeout(function () {
+      nueva.className = 'capa visible';
+      vieja.className = 'capa';
+      activa = 1 - activa;
+      setTimeout(function () { vieja.style.backgroundImage = 'none'; }, 2200);   // libera memoria
+    }, 60);
+
+    autor.className = '';
+    if (autorTimer) { clearTimeout(autorTimer); }
+    if (foto.n) {
+      autor.textContent = foto.n;
+      autorTimer = setTimeout(function () { autor.className = 'visible'; }, 1800);
+    }
+  }
+
+  function esDeNoche() {
+    var h = new Date().getHours();
+    var ini = CFG.horaEncender, fin = CFG.horaApagar;
+    if (typeof ini !== 'number' || typeof fin !== 'number') { return false; }
+    if (ini === fin) { return false; }
+    if (ini < fin) { return !(h >= ini && h < fin); }
+    return !(h >= ini || h < fin);
+  }
+
+  // ---------- ciclo principal ----------
+  var corriendo = false;
+  var siguiente = null;       // foto ya descargada y lista
+  var cargando = false;       // hay una descarga en curso
+  var esperando = false;      // el reloj ya tocó y estamos esperando la descarga
+  var timer = null;
+  var intervalo = Math.max(10, CFG.intervaloSegundos || 60) * 1000;
+
+  function precargar() {
+    if (cargando) { return; }
+    cargando = true;
+    prepararSiguiente(function (foto) {
+      cargando = false;
+      siguiente = foto;
+      if (esperando) { esperando = false; tic(); }
+    });
+  }
+
+  function programar(ms) {
+    if (timer) { clearTimeout(timer); }
+    timer = setTimeout(tic, ms);
+  }
+
+  function noche(dormir) {
+    var i;
+    if (dormir) {
+      for (i = 0; i < 2; i++) { capas[i].className = 'capa'; }
+      autor.className = '';
+      setTimeout(function () { capas[0].style.backgroundImage = 'none'; capas[1].style.backgroundImage = 'none'; }, 2200);
+    }
+  }
+
+  var estabaDeNoche = false;
+
+  function tic() {
+    if (esDeNoche()) {
+      if (!estabaDeNoche) { estabaDeNoche = true; noche(true); }
+      programar(60000);
+      return;
+    }
+    estabaDeNoche = false;
+
+    if (!siguiente) {
+      if (!ids.length && !nuevas.length) {
+        mensaje('Aún no hay fotos', 'Sube la primera desde tu celular \uD83D\uDCF7');
+        programar(30000);
+        return;
+      }
+      esperando = true;
+      precargar();
+      // si la descarga falla, volver a intentar en un rato
+      programar(45000);
+      return;
+    }
+
+    mensaje(null);
+    var foto = siguiente;
+    siguiente = null;
+    esperando = false;
+    mostrar(foto);
+    precargar();
+    programar(intervalo);
+  }
+
+  function arrancar() {
+    if (corriendo) { return; }
+    corriendo = true;
+    tic();
+  }
+
+  // ---------- inicio ----------
+  function iniciar() {
+    if (!CFG.projectId || /PEGA_AQUI/.test(CFG.projectId)) {
+      mensaje('Falta configurar', 'Abre config.js y pon el projectId y el apiKey de Firebase.');
+      return;
+    }
+    if (!COL) {
+      mensaje('Falta el código familiar', 'Abre esta página con el link que termina en #c=fam_… y vuelve a agregarla a la pantalla de inicio.');
+      return;
+    }
+    mensaje('Cargando fotos…', '');
+    cargarTodo(function (err) {
+      if (err) {
+        var detalle = (err.status === 403) ? 'Firebase rechazó el acceso: revisa las reglas de Firestore.' : 'Sin conexión. Reintentando…';
+        mensaje('No se pudieron cargar las fotos', detalle);
+        setTimeout(iniciar, 20000);
+        return;
+      }
+      mensaje(null);
+      arrancar();
+      setInterval(buscarNuevas, Math.max(1, CFG.revisarNuevasMin || 5) * 60000);
+      // reinicio diario de madrugada para que la página no se degrade con los días
+      var arranque = new Date().getTime();
+      setInterval(function () {
+        var d = new Date();
+        if (d.getHours() === 4 && (d.getTime() - arranque) > 3 * 3600000) { location.reload(); }
+      }, 300000);
+    });
+  }
+
+  // que no se mueva ni haga zoom al tocarla
+  document.addEventListener('touchmove', function (e) { e.preventDefault(); }, false);
+  iniciar();
+})();
+</script>
+</body>
+</html>

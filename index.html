@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Fotos de la sala</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fotos sala">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root { --bg: #14110f; --card: #211c18; --line: #342d27; --txt: #f3ece4; --mut: #a39a90; --acc: #e8a54b; --ok: #6fcf97; --bad: #eb6b5e; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+  header { padding: 22px 0 8px; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.3px; }
+  .sub { color: var(--mut); font-size: 15px; margin: 0; }
+  .tabs { display: flex; gap: 8px; margin: 18px 0 14px; }
+  .tab { flex: 1; padding: 11px 0; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--mut); font-size: 15px; font-weight: 600; }
+  .tab.on { background: var(--card); color: var(--txt); border-color: var(--acc); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: var(--mut); margin: 0 0 6px; }
+  input[type=text] { width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: #17130f; color: var(--txt); font-size: 17px; }
+  input[type=text]:focus { outline: 2px solid var(--acc); border-color: transparent; }
+  .btn { display: block; width: 100%; padding: 17px; border: 0; border-radius: 16px; background: var(--acc); color: #1b130a; font-size: 18px; font-weight: 700; text-align: center; }
+  .btn:active { transform: scale(.98); }
+  .btn.sec { background: transparent; color: var(--txt); border: 1px solid var(--line); font-size: 15px; font-weight: 600; padding: 13px; }
+  .btn[disabled] { opacity: .5; }
+  #file { display: none; }
+  .prog { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 14px 0 8px; }
+  .prog > i { display: block; height: 100%; width: 0; background: var(--acc); transition: width .25s; }
+  .estado { font-size: 15px; color: var(--mut); min-height: 22px; }
+  .estado.ok { color: var(--ok); } .estado.bad { color: var(--bad); }
+  .lista { list-style: none; margin: 12px 0 0; padding: 0; font-size: 14px; color: var(--mut); }
+  .lista li { padding: 4px 0; } .lista .ok { color: var(--ok); } .lista .bad { color: var(--bad); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .foto { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 1; }
+  .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto .quien { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 6px; font-size: 12px; background: linear-gradient(transparent, rgba(0,0,0,.75)); }
+  .foto button { position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 17px; }
+  .vacio { text-align: center; color: var(--mut); padding: 30px 0; }
+  .oculto { display: none !important; }
+  .nota { font-size: 13px; color: var(--mut); line-height: 1.45; margin: 12px 2px 0; }
+  .nota a { color: var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📸 Fotos de la sala</h1>
+  <p class="sub">Lo que subas aparece en la pantalla de la casa.</p>
+</header>
+
+<!-- Falta el código familiar -->
+<section id="sinCodigo" class="card oculto">
+  <label for="codigoIn">Código familiar</label>
+  <input type="text" id="codigoIn" placeholder="fam_xxxxxxxxxxxx" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
+  <p class="nota">Te lo pasaron junto con el link. Normalmente no hace falta escribirlo: basta abrir el link completo.</p>
+  <div style="height:12px"></div>
+  <button class="btn" id="guardarCodigo">Guardar código</button>
+</section>
+
+<main id="app" class="oculto">
+  <div class="tabs">
+    <button class="tab on" data-tab="subir">Subir fotos</button>
+    <button class="tab" data-tab="galeria">Galería</button>
+  </div>
+
+  <section id="vSubir">
+    <div class="card">
+      <label for="nombre">Tu nombre (aparece chiquito junto a la foto)</label>
+      <input type="text" id="nombre" placeholder="Ej. Abuela, Mario, Tía Lupe" maxlength="24" autocomplete="off">
+      <div style="height:16px"></div>
+      <input type="file" id="file" accept="image/*" multiple>
+      <button class="btn" id="elegir">Elegir fotos</button>
+      <div class="prog oculto" id="prog"><i id="progBar"></i></div>
+      <div class="estado" id="estado"></div>
+      <ul class="lista" id="resultados"></ul>
+    </div>
+    <p class="nota">Las fotos se reducen automáticamente antes de subirse, así que gastan pocos datos y se ven bien en la pantalla.</p>
+  </section>
+
+  <section id="vGaleria" class="oculto">
+    <div class="grid" id="grid"></div>
+    <div class="vacio oculto" id="vacio">Todavía no hay fotos. ¡Sube la primera!</div>
+    <div style="height:14px"></div>
+    <button class="btn sec oculto" id="mas">Ver más antiguas</button>
+    <p class="nota">Si borras una foto con la ✕, desaparece de la pantalla de la casa.</p>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.FOTOS_CONFIG || {};
+  var API = 'https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents';
+  var KEY = '?key=' + encodeURIComponent(CFG.apiKey || '');
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- código familiar ----------
+  function guardarLocal(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function leerLocal(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  var COL = null;
+  (function () {
+    var m = /[#&?]c=([A-Za-z0-9_]+)/.exec(location.hash || '');
+    COL = m ? m[1] : leerLocal('fs_code');
+    if (m) { guardarLocal('fs_code', COL); }
+  })();
+
+  function mostrarApp() {
+    $('sinCodigo').classList.add('oculto');
+    $('app').classList.remove('oculto');
+  }
+
+  if (!CFG.projectId || /PEGA_AQUI/.test(CFG.projectId)) {
+    document.querySelector('header .sub').textContent = 'Falta configurar Firebase en config.js';
+  } else if (COL) {
+    mostrarApp();
+  } else {
+    $('sinCodigo').classList.remove('oculto');
+  }
+
+  $('guardarCodigo').onclick = function () {
+    var v = $('codigoIn').value.trim();
+    if (!/^[A-Za-z0-9_]{6,}$/.test(v)) { alert('Ese código no parece válido.'); return; }
+    COL = v; guardarLocal('fs_code', v); mostrarApp();
+  };
+
+  // ---------- nombre ----------
+  $('nombre').value = leerLocal('fs_nombre') || '';
+  $('nombre').addEventListener('input', function () { guardarLocal('fs_nombre', this.value.trim()); });
+
+  // ---------- pestañas ----------
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].onclick = function () {
+      for (var j = 0; j < tabs.length; j++) { tabs[j].classList.remove('on'); }
+      this.classList.add('on');
+      var t = this.getAttribute('data-tab');
+      $('vSubir').classList.toggle('oculto', t !== 'subir');
+      $('vGaleria').classList.toggle('oculto', t !== 'galeria');
+      if (t === 'galeria') { cargarGaleria(true); }
+    };
+  }
+
+  // ---------- reducir foto ----------
+  function reducir(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var lado = 1600, calidad = 0.72, intento = 0, data;
+          var w = img.naturalWidth, h = img.naturalHeight;
+          do {
+            var esc = Math.min(1, lado / Math.max(w, h));
+            var c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(w * esc));
+            c.height = Math.max(1, Math.round(h * esc));
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            data = c.toDataURL('image/jpeg', calidad);
+            // el documento de Firestore admite < 1 MiB: dejamos margen
+            if (data.length < 850000) { break; }
+            calidad -= 0.08; lado = Math.round(lado * 0.85); intento++;
+          } while (intento < 6);
+          URL.revokeObjectURL(url);
+          if (data.length >= 900000) { reject(new Error('muy pesada')); } else { resolve(data); }
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('no se pudo leer')); };
+      img.src = url;
+    });
+  }
+
+  // ---------- subir ----------
+  function subirUna(dataUrl, nombre) {
+    var campos = { img: { stringValue: dataUrl }, t: { integerValue: String(Date.now()) } };
+    if (nombre) { campos.n = { stringValue: nombre }; }
+    return fetch(API + '/' + COL + KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: campos })
+    }).then(function (r) {
+      if (!r.ok) { throw new Error(r.status === 403 ? 'sin permiso (código incorrecto)' : 'error ' + r.status); }
+      return r.json();
+    });
+  }
+
+  var subiendo = false;
+  $('elegir').onclick = function () { if (!subiendo) { $('file').click(); } };
+
+  $('file').onchange = async function () {
+    var files = Array.prototype.slice.call(this.files || []);
+    this.value = '';
+    if (!files.length || subiendo) { return; }
+    subiendo = true;
+    $('elegir').disabled = true;
+    $('prog').classList.remove('oculto');
+    $('resultados').innerHTML = '';
+    var nombre = $('nombre').value.trim();
+    var ok = 0, mal = 0;
+
+    for (var k = 0; k < files.length; k++) {
+      var est = $('estado');
+      est.className = 'estado';
+      est.textContent = 'Subiendo ' + (k + 1) + ' de ' + files.length + '…';
+      $('progBar').style.width = (k / files.length * 100) + '%';
+      var li = document.createElement('li');
+      try {
+        var d = await reducir(files[k]);
+        await subirUna(d, nombre);
+        ok++; li.className = 'ok'; li.textContent = '✓ ' + (files[k].name || 'foto ' + (k + 1));
+      } catch (e) {
+        mal++; li.className = 'bad'; li.textContent = '✕ ' + (files[k].name || 'foto ' + (k + 1)) + ' — ' + e.message;
+      }
+      $('resultados').appendChild(li);
+    }
+
+    $('progBar').style.width = '100%';
+    var e2 = $('estado');
+    if (mal === 0) { e2.className = 'estado ok'; e2.textContent = ok === 1 ? '¡Listo! Tu foto ya va para la pantalla 🎉' : '¡Listas! ' + ok + ' fotos van para la pantalla 🎉'; }
+    else { e2.className = 'estado bad'; e2.textContent = ok + ' subidas, ' + mal + ' con problema. Intenta de nuevo con las que fallaron.'; }
+    setTimeout(function () { $('prog').classList.add('oculto'); $('progBar').style.width = '0'; }, 1200);
+    subiendo = false;
+    $('elegir').disabled = false;
+    galeriaLista = false;
+  };
+
+  // ---------- galería (y borrar) ----------
+  var galeriaLista = false;
+  var cursorT = null;       // última fecha cargada (para "ver más")
+  var POR_PAGINA = 12;
+
+  function consultarPagina(antesDeT) {
+    var sq = {
+      from: [{ collectionId: COL }],
+      orderBy: [{ field: { fieldPath: 't' }, direction: 'DESCENDING' }],
+      limit: POR_PAGINA
+    };
+    if (antesDeT) {
+      sq.where = { fieldFilter: { field: { fieldPath: 't' }, op: 'LESS_THAN', value: { integerValue: String(antesDeT) } } };
+    }
+    return fetch(API + ':runQuery' + KEY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: sq })
+    }).then(function (r) { if (!r.ok) { throw new Error('error ' + r.status); } return r.json(); });
+  }
+
+  function cargarGaleria(reiniciar) {
+    if (reiniciar) {
+      if (galeriaLista) { return; }
+      $('grid').innerHTML = ''; cursorT = null;
+    }
+    $('vacio').classList.add('oculto');
+    $('mas').classList.add('oculto');
+    consultarPagina(reiniciar ? null : cursorT).then(function (res) {
+      var docs = res.filter(function (x) { return x.document; }).map(function (x) { return x.document; });
+      docs.forEach(function (d) {
+        var partes = d.name.split('/'), id = partes[partes.length - 1];
+        var f = d.fields || {};
+        var t = f.t ? parseInt(f.t.integerValue, 10) : 0;
+        cursorT = t;
+        var box = document.createElement('div'); box.className = 'foto';
+        var im = document.createElement('img'); im.loading = 'lazy'; im.src = f.img ? f.img.stringValue : '';
+        box.appendChild(im);
+        if (f.n && f.n.stringValue) {
+          var q = document.createElement('div'); q.className = 'quien'; q.textContent = f.n.stringValue; box.appendChild(q);
+        }
+        var b = document.createElement('button'); b.textContent = '✕'; b.setAttribute('aria-label', 'Borrar foto');
+        b.onclick = function () {
+          if (!confirm('¿Borrar esta foto? También desaparece de la pantalla de la casa.')) { return; }
+          fetch(API + '/' + COL + '/' + id + KEY, { method: 'DELETE' }).then(function (r) {
+            if (r.ok) { box.remove(); } else { alert('No se pudo borrar (error ' + r.status + ').'); }
+          }).catch(function () { alert('No se pudo borrar. Revisa tu conexión.'); });
+        };
+        box.appendChild(b);
+        $('grid').appendChild(box);
+      });
+      galeriaLista = true;
+      if (!$('grid').children.length) { $('vacio').classList.remove('oculto'); }
+      if (docs.length === POR_PAGINA) { $('mas').classList.remove('oculto'); }
+    }).catch(function (e) {
+      $('vacio').textContent = 'No se pudo cargar la galería (' + e.message + ').';
+      $('vacio').classList.remove('oculto');
+    });
+  }
+  $('mas').onclick = function () { cargarGaleria(false); };
+
+  // ---------- service worker (para poder instalarla como app) ----------
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+})();
+</script>
+</body>
+</html>
