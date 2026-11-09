@@ -36,3 +36,5 @@ Push to `main` on GitHub. GitHub Pages serves the repo root. Mario uses GitHub D
 
 ## Files to read next
 `ARCHITECTURE.md` (file map, data model, flows) → `FEATURES.md` (behavior, user decisions) → `TODO.md`.
+
+- On every release, bump BOTH the `CACHE` name in `sw.js` and the "Versión vN" footer text in `index.html` (they must match).

@@ -1,5 +1,9 @@
 # CHANGELOG (newest first)
 
+## 2026-11-09 — Visible version label (v5)
+- `index.html`: footer line "Versión vN · date" so Mario can confirm the deployed version on his phone. Bump this text together with the `CACHE` name in `sw.js` on every release.
+- Bumped service worker cache `fotos-sala-v4` -> `fotos-sala-v5`.
+
 ## 2026-11-09 — Blurred background + new manifest id
 - `pantalla.html`: each layer now has a `.fondo` div (same photo, `cover`, blur 28px, brightness .7, scale 1.25) behind a `.frente` div (`contain`), so portrait photos no longer show black side bars. ES5 preserved. Toggle with `fondoDifuso: false` in `config.js` (hides the blur if the old iPad is slow).
 - `manifest.webmanifest`: added `"id": "/fotos-sala/app"` because Chrome on Mario's phone held a stale WebAPK record ("already installed" / "Could not open app"). A new id makes Chrome treat it as a new app.
