@@ -1,5 +1,10 @@
 # CHANGELOG (newest first)
 
+## 2026-11-24 — Short video clips (v6)
+- Added trimming, preview, and upload of silent GIFs from the phone.
+- The iPad shows GIFs in the existing rotation. The Firestore schema and rules template remain compatible.
+- Bumped service worker cache and visible version to v6.
+
 ## 2026-11-09 — Visible version label (v5)
 - `index.html`: footer line "Versión vN · date" so Mario can confirm the deployed version on his phone. Bump this text together with the `CACHE` name in `sw.js` on every release.
 - Bumped service worker cache `fotos-sala-v4` -> `fotos-sala-v5`.

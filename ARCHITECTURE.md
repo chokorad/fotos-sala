@@ -5,8 +5,9 @@
 |---|---|
 | `index.html` | Upload PWA for phones. Tabs: upload (pick photos, optional display name, progress) and gallery (paginated grid, delete button). Inline CSS + JS. |
 | `pantalla.html` | iPad slideshow. ES5 only. Two stacked `div.capa` layers cross-fade; shows author name; night mode; auto-refresh. Inline CSS + JS. |
+| `clips.mjs`, `vendor/gifenc.mjs` | Sample a local video into a looping GIF in the phone browser. The vendored encoder is gifenc 1.0.3 (MIT). |
 | `config.js` | `window.FOTOS_CONFIG`: `projectId`, `apiKey`, slideshow interval, active hours, polling period. Loaded by both pages. |
-| `sw.js` | Service worker for the upload PWA: network-first, cache fallback, ignores cross-origin (Firebase) requests. Cache name `fotos-sala-v1`. |
+| `sw.js` | Service worker for the upload PWA: network-first, cache fallback, ignores cross-origin (Firebase) requests. Cache name `fotos-sala-v6`. |
 | `manifest.webmanifest` | PWA manifest (standalone, portrait, dark theme). |
 | `icon-180.png` | iOS home-screen icon (used by both pages). |
 | `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | PWA icons. |
@@ -20,7 +21,7 @@ Not in the repo (on Mario's computer only): `CODIGO_FAMILIAR.txt`, `firestore.ru
 ## Data model (Cloud Firestore)
 - **Collection name = the family code** (format `fam_` + 14 lowercase letters/digits). There is no other collection in use; the rules deny everything else.
 - **Document** (auto id), fields:
-  - `img` — string, JPEG data URL (`data:image/jpeg;base64,...`), max ~850,000 chars client-side, rules cap at 950,000 (Firestore doc limit is 1 MiB).
+  - `img` — string, JPEG or animated GIF data URL, max ~850,000 chars client-side, rules cap at 950,000 (Firestore doc limit is 1 MiB).
   - `t` — integer, `Date.now()` in ms at upload. Used for ordering and for "newer than" queries.
   - `n` — string, optional uploader name, max 24 chars.
 - Example (REST format): `{"fields":{"img":{"stringValue":"data:image/jpeg;base64,/9j/..."},"t":{"integerValue":"1762650000000"},"n":{"stringValue":"Mamá"}}}`
@@ -31,6 +32,8 @@ The code travels in the URL fragment: `.../#c=<code>`. Pages read it, store it i
 
 ## Flows
 **Upload (index.html):** pick files → for each file: draw to canvas, scale longest side to 1600 px, JPEG quality 0.72 (lowered and resized in steps until under 850k chars) → `POST /documents/<code>` with `img`, `t`, optional `n` → show ✓/✕ per file.
+
+**Clips (index.html):** select a locally decodable video under 60 seconds, trim a 0.5–10 second segment, encode a looping GIF in the browser, preview it, then upload through the same path as photos. The encoder lowers resolution and frame rate if needed to keep the data URL under 850,000 characters.
 
 **Gallery (index.html):** `POST :runQuery` ordered by `t` desc, limit 12, paginate with `t < last`. Delete = `DELETE /documents/<code>/<id>`.
 

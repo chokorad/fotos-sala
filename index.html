@@ -31,7 +31,10 @@
   .btn:active { transform: scale(.98); }
   .btn.sec { background: transparent; color: var(--txt); border: 1px solid var(--line); font-size: 15px; font-weight: 600; padding: 13px; }
   .btn[disabled] { opacity: .5; }
-  #file { display: none; }
+  #file, #archivoVideo { display: none; }
+  .clip .btn + .btn { margin-top: 8px; }
+  .clip video, .clip img { width: 100%; max-height: 300px; object-fit: contain; background: #000; margin: 12px 0; }
+  .clip input[type=range] { width: 100%; accent-color: var(--acc); margin: 0 0 12px; }
   .prog { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 14px 0 8px; }
   .prog > i { display: block; height: 100%; width: 0; background: var(--acc); transition: width .25s; }
   .estado { font-size: 15px; color: var(--mut); min-height: 22px; }
@@ -66,7 +69,7 @@
 
 <main id="app" class="oculto">
   <div class="tabs">
-    <button class="tab on" data-tab="subir">Subir fotos</button>
+    <button class="tab on" data-tab="subir">Subir</button>
     <button class="tab" data-tab="galeria">Galería</button>
   </div>
 
@@ -82,6 +85,22 @@
       <ul class="lista" id="resultados"></ul>
     </div>
     <p class="nota">Las fotos se reducen automáticamente antes de subirse, así que gastan pocos datos y se ven bien en la pantalla.</p>
+    <div class="card clip">
+      <input type="file" id="archivoVideo" accept="video/*">
+      <button class="btn sec" id="elegirVideo">Elegir video</button>
+      <p class="nota" id="ayudaClip">Video de menos de un minuto. Elige hasta 10 segundos para crear un GIF sin sonido.</p>
+      <div class="oculto" id="editorClip">
+        <video id="videoClip" playsinline muted preload="auto" aria-label="Vista del video en el inicio del recorte"></video>
+        <label for="inicioClip">Inicio <output id="valorInicio">0.0 s</output></label>
+        <input type="range" id="inicioClip" min="0" value="0" step="0.1">
+        <label for="duracionClip">Duración <output id="valorDuracion">8.0 s</output></label>
+        <input type="range" id="duracionClip" min="0.5" value="8" step="0.1">
+        <button class="btn sec" id="prepararClip">Crear vista previa</button>
+        <img id="previaClip" class="oculto" alt="Vista previa del GIF">
+        <button class="btn oculto" id="subirClip">Subir GIF</button>
+      </div>
+      <div class="estado" id="estadoClip" role="status"></div>
+    </div>
   </section>
 
   <section id="vGaleria" class="oculto">
@@ -93,7 +112,7 @@
   </section>
 </main>
 
-<p class="nota" id="version" style="text-align:center;opacity:.6;margin:28px 0 18px">Versión v5 · 2026-11-09</p>
+<p class="nota" id="version" style="text-align:center;opacity:.6;margin:28px 0 18px">Versión v6 · 2026-11-24</p>
 
 <script src="config.js"></script>
 <script>
@@ -234,6 +253,127 @@
     subiendo = false;
     $('elegir').disabled = false;
     galeriaLista = false;
+  };
+
+  // ---------- recortar y subir un clip ----------
+  const video = $('videoClip');
+  const inicioClip = $('inicioClip');
+  const duracionClip = $('duracionClip');
+  const estadoClip = $('estadoClip');
+  const previaClip = $('previaClip');
+  let urlVideo = null;
+  let gifClip = null;
+  let ocupadoClip = false;
+
+  function mostrarEstadoClip(texto, clase = '') {
+    estadoClip.textContent = texto;
+    estadoClip.className = 'estado ' + clase;
+  }
+
+  function limpiarPrevia() {
+    gifClip = null;
+    previaClip.removeAttribute('src');
+    previaClip.classList.add('oculto');
+    $('subirClip').classList.add('oculto');
+  }
+
+  function limpiarVideo() {
+    limpiarPrevia();
+    $('editorClip').classList.add('oculto');
+    if (urlVideo) {
+      const anterior = urlVideo;
+      urlVideo = null;
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(anterior);
+    }
+  }
+
+  function bloquearClip(bloqueado) {
+    ocupadoClip = bloqueado;
+    for (const id of ['elegirVideo', 'inicioClip', 'duracionClip', 'prepararClip', 'subirClip']) {
+      $(id).disabled = bloqueado;
+    }
+  }
+
+  function actualizarRecorte(mostrarInicio) {
+    limpiarPrevia();
+    inicioClip.max = String(Math.max(0, Math.floor((video.duration - Number(duracionClip.value)) * 10) / 10));
+    $('valorInicio').textContent = Number(inicioClip.value).toFixed(1) + ' s';
+    $('valorDuracion').textContent = Number(duracionClip.value).toFixed(1) + ' s';
+    if (mostrarInicio) video.currentTime = Number(inicioClip.value);
+    mostrarEstadoClip('');
+  }
+
+  $('elegirVideo').onclick = () => $('archivoVideo').click();
+  $('archivoVideo').onchange = function () {
+    const archivo = this.files[0];
+    this.value = '';
+    if (!archivo || ocupadoClip) return;
+    limpiarVideo();
+    mostrarEstadoClip('Abriendo video…');
+    urlVideo = URL.createObjectURL(archivo);
+    video.src = urlVideo;
+  };
+
+  video.onloadedmetadata = () => {
+    if (!urlVideo) return;
+    if (!Number.isFinite(video.duration) || video.duration >= 60 || video.duration < 0.5 ||
+        !video.videoWidth || !video.videoHeight) {
+      limpiarVideo();
+      mostrarEstadoClip('Elige un video de al menos medio segundo y menos de un minuto.', 'bad');
+      return;
+    }
+    const maximo = Math.min(10, Math.floor(video.duration * 10) / 10);
+    duracionClip.max = String(maximo);
+    duracionClip.value = String(Math.min(8, maximo));
+    inicioClip.value = '0';
+    actualizarRecorte(false);
+    $('editorClip').classList.remove('oculto');
+  };
+
+  video.onerror = () => {
+    if (!urlVideo || ocupadoClip) return;
+    limpiarVideo();
+    mostrarEstadoClip('No se pudo abrir el video. Prueba con un MP4.', 'bad');
+  };
+  inicioClip.oninput = () => actualizarRecorte(true);
+  duracionClip.oninput = () => actualizarRecorte(true);
+
+  $('prepararClip').onclick = async () => {
+    bloquearClip(true);
+    limpiarPrevia();
+    mostrarEstadoClip('Preparando el GIF…');
+    try {
+      const { convertirClip } = await import('./clips.mjs');
+      gifClip = await convertirClip(video, Number(inicioClip.value), Number(duracionClip.value),
+        (cuadro, total, lado) => mostrarEstadoClip('Creando GIF · ' + cuadro + '/' + total + ' · ' + lado + ' px'));
+      previaClip.src = gifClip;
+      previaClip.classList.remove('oculto');
+      $('subirClip').classList.remove('oculto');
+      mostrarEstadoClip('Vista previa lista.', 'ok');
+    } catch (error) {
+      mostrarEstadoClip(error.message || 'No se pudo crear el GIF.', 'bad');
+    } finally {
+      bloquearClip(false);
+    }
+  };
+
+  $('subirClip').onclick = async () => {
+    if (!gifClip || ocupadoClip) return;
+    bloquearClip(true);
+    mostrarEstadoClip('Subiendo GIF…');
+    try {
+      await subirUna(gifClip, $('nombre').value.trim());
+      limpiarVideo();
+      galeriaLista = false;
+      if (!$('vGaleria').classList.contains('oculto')) cargarGaleria(true);
+      mostrarEstadoClip('¡Listo! Tu GIF ya va para la pantalla.', 'ok');
+    } catch (error) {
+      mostrarEstadoClip('No se pudo subir el GIF (' + error.message + '). Intenta de nuevo.', 'bad');
+    } finally {
+      bloquearClip(false);
+    }
   };
 
   // ---------- galería (y borrar) ----------
