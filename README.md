@@ -10,3 +10,5 @@ Family digital photo frame. Family uploads photos from a phone PWA; an old iPad 
 - **Deploy:** push to `main`; GitHub Pages serves the repo root
 
 Setup steps (Spanish): `LEEME.md`. For agents: start with `AGENTS.md`.
+
+Use **Elegir video** to preview and upload a silent 0.5–10 second GIF from a video under 60 seconds. See [deployment](DEPLOY.md) and [verification](TESTS.md).

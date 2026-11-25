@@ -14,3 +14,5 @@
 ## Known limitations
 - Photos are stored in Firestore as base64 text (~33% overhead) and capped near 1 MiB per document.
 - The iPad downloads one photo at a time (~4–6 GiB/month at one photo/minute, 16 h/day), under the 10 GiB free egress.
+
+- [ ] Verify animated GIF playback, photo rotation, and clip uploads on the physical iPad and family phones before closing the v6 release. See `TESTS.md`.

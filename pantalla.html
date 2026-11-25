@@ -212,8 +212,8 @@
   var autorTimer = null;
   if (window.FOTOS_CONFIG && window.FOTOS_CONFIG.fondoDifuso === false) { document.body.className = 'sinfondo'; }
 
-  function ponerImagen(capa, valor) {
-    capa.firstChild.style.backgroundImage = valor;
+  function ponerImagen(capa, valor, animada) {
+    capa.firstChild.style.backgroundImage = animada ? 'none' : valor;
     capa.lastChild.style.backgroundImage = valor;
   }
 
@@ -221,7 +221,7 @@
     var vieja = capas[activa];
     var nueva = capas[1 - activa];
     ultimoId = foto.id;
-    ponerImagen(nueva, 'url("' + foto.img + '")');
+    ponerImagen(nueva, 'url("' + foto.img + '")', /^data:image\/gif;base64,/.test(foto.img));
     // pequeño retraso para que el navegador pinte la imagen antes de hacer el fundido
     setTimeout(function () {
       nueva.className = 'capa visible';
