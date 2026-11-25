@@ -1,5 +1,9 @@
 # CHANGELOG (newest first)
 
+## 2026-11-24 — Mobile GIF capture (v7)
+- Recover from stalled frame seeks by sampling muted playback.
+- Bumped service worker cache and visible version to v7.
+
 ## 2026-11-24 — Short video clips (v6)
 - Added trimming, preview, and upload of silent GIFs from the phone.
 - The iPad shows GIFs in the existing rotation. The Firestore schema and rules template remain compatible.
