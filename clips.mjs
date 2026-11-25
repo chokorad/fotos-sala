@@ -5,9 +5,44 @@ const COLOR_FORMAT = 'rgb444';
 
 class FrameReadError extends Error {}
 
-function seekFrame(video, time) {
+export async function convertirConReintento(convertir, alPausar) {
+  while (true) {
+    if (document.hidden) {
+      alPausar();
+      await new Promise((resolve) => {
+        const visible = () => {
+          if (document.hidden) return;
+          document.removeEventListener('visibilitychange', visible);
+          resolve();
+        };
+        document.addEventListener('visibilitychange', visible);
+        visible();
+      });
+    }
+
+    const controller = new AbortController();
+    const pauseIfHidden = () => {
+      if (document.hidden) {
+        controller.abort();
+        alPausar();
+      }
+    };
+    document.addEventListener('visibilitychange', pauseIfHidden);
+    try {
+      const gif = await convertir(controller.signal);
+      if (!controller.signal.aborted && !document.hidden) return gif;
+    } catch (error) {
+      if (!controller.signal.aborted && !document.hidden) throw error;
+    } finally {
+      document.removeEventListener('visibilitychange', pauseIfHidden);
+    }
+  }
+}
+
+function seekFrame(video, time, signal) {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
+      signal?.removeEventListener('abort', onAbort);
       clearInterval(poll);
       clearTimeout(timer);
       video.removeEventListener('seeked', onSeek);
@@ -23,8 +58,13 @@ function seekFrame(video, time) {
       cleanup();
       reject(new FrameReadError('No se pudo buscar un fotograma.'));
     };
+    const onAbort = () => {
+      cleanup();
+      reject(signal.reason);
+    };
     const poll = setInterval(onSeek, 40);
     const timer = setTimeout(onError, 4000);
+    signal?.addEventListener('abort', onAbort, { once: true });
     video.addEventListener('seeked', onSeek);
     video.addEventListener('loadeddata', onSeek);
     video.addEventListener('error', onError);
@@ -38,7 +78,7 @@ function seekFrame(video, time) {
 }
 
 // Some mobile decoders stall when asked to seek repeatedly while paused.
-async function captureDuringPlayback(video, inicio, segundos, frames, capture, progress) {
+async function captureDuringPlayback(video, inicio, segundos, frames, capture, progress, signal) {
   const images = [];
   const fail = 'El video abre, pero no se pudieron capturar sus fotogramas. Prueba con una copia exportada en MP4 (H.264).';
   try {
@@ -47,6 +87,7 @@ async function captureDuringPlayback(video, inicio, segundos, frames, capture, p
       let frameRequest;
       let settled = false;
       const cleanup = () => {
+        signal?.removeEventListener('abort', onAbort);
         settled = true;
         cancelAnimationFrame(frameRequest);
         clearTimeout(timer);
@@ -55,6 +96,10 @@ async function captureDuringPlayback(video, inicio, segundos, frames, capture, p
       const onError = () => {
         cleanup();
         reject(new FrameReadError(fail));
+      };
+      const onAbort = () => {
+        cleanup();
+        reject(signal.reason);
       };
       const sample = () => {
         try {
@@ -78,6 +123,7 @@ async function captureDuringPlayback(video, inicio, segundos, frames, capture, p
         }
       };
       const timer = setTimeout(onError, (segundos + 8) * 1000);
+      signal?.addEventListener('abort', onAbort, { once: true });
       video.addEventListener('error', onError);
       Promise.resolve(video.play()).then(() => {
         if (settled) return;
@@ -86,13 +132,15 @@ async function captureDuringPlayback(video, inicio, segundos, frames, capture, p
     });
     return images;
   } catch {
+    if (signal?.aborted) throw signal.reason;
     throw new FrameReadError(fail);
   } finally {
     video.pause();
   }
 }
 
-export async function convertirClip(video, inicio, segundos, progreso) {
+export async function convertirClip(video, inicio, segundos, progreso, signal) {
+  if (signal?.aborted) throw signal.reason;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const preset = [{ lado: 480, fps: 8 }, { lado: 320, fps: 6 }, { lado: 224, fps: 4 }, { lado: 144, fps: 3 }];
@@ -110,17 +158,17 @@ export async function convertirClip(video, inicio, segundos, progreso) {
     canvas.height = Math.max(1, Math.round(video.videoHeight * escala));
     const frames = Math.max(1, Math.round(segundos * fps));
     const report = (count) => progreso(count, frames, lado);
-    let recorded = playback ? await captureDuringPlayback(video, inicio, segundos, frames, capture, report) : null;
+    let recorded = playback ? await captureDuringPlayback(video, inicio, segundos, frames, capture, report, signal) : null;
     let gif = GIFEncoder();
 
     for (let i = 0; i < frames; i += 1) {
       if (!recorded) {
         try {
-          await seekFrame(video, inicio + (i + 0.5) * segundos / frames);
+          await seekFrame(video, inicio + (i + 0.5) * segundos / frames, signal);
         } catch (error) {
           if (!(error instanceof FrameReadError)) throw error;
           playback = true;
-          recorded = await captureDuringPlayback(video, inicio, segundos, frames, capture, report);
+          recorded = await captureDuringPlayback(video, inicio, segundos, frames, capture, report, signal);
           gif = GIFEncoder();
           i = 0;
         }

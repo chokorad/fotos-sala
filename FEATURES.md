@@ -26,3 +26,5 @@
 - iPad shows photos **in random order**; new ones first.
 - Hosting on GitHub Pages like Mario's other apps; updates are done by pushing to GitHub with GitHub Desktop.
 - Handoff docs must stay up to date so other agents (Antigravity, Claude Code, etc.) can modify the app.
+
+- If the phone app goes into the background during GIF conversion, it pauses and retries the selected trim when visible again. The trim is held while the browser keeps the page open.

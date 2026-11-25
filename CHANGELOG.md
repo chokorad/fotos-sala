@@ -1,5 +1,9 @@
 # CHANGELOG (newest first)
 
+## 2026-11-24 — Resume GIF creation (v8)
+- Cancel active video decoding when the phone app goes into the background and retry the same trim on return.
+- Bumped the service worker cache and version label to v8.
+
 ## 2026-11-24 — Mobile GIF capture (v7)
 - Recover from stalled frame seeks by sampling muted playback.
 - Bumped service worker cache and visible version to v7.

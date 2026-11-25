@@ -7,7 +7,7 @@
 | `pantalla.html` | iPad slideshow. ES5 only. Two stacked `div.capa` layers cross-fade; shows author name; night mode; auto-refresh. Inline CSS + JS. |
 | `clips.mjs`, `vendor/gifenc.mjs` | Sample a local video into a looping GIF in the phone browser. The vendored encoder is gifenc 1.0.3 (MIT). |
 | `config.js` | `window.FOTOS_CONFIG`: `projectId`, `apiKey`, slideshow interval, active hours, polling period. Loaded by both pages. |
-| `sw.js` | Service worker for the upload PWA: network-first, cache fallback, ignores cross-origin (Firebase) requests. Cache name `fotos-sala-v7`. |
+| `sw.js` | Service worker for the upload PWA: network-first, cache fallback, ignores cross-origin (Firebase) requests. Cache name `fotos-sala-v8`. |
 | `manifest.webmanifest` | PWA manifest (standalone, portrait, dark theme). |
 | `icon-180.png` | iOS home-screen icon (used by both pages). |
 | `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | PWA icons. |

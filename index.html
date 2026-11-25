@@ -112,7 +112,7 @@
   </section>
 </main>
 
-<p class="nota" id="version" style="text-align:center;opacity:.6;margin:28px 0 18px">Versión v7 · 2026-11-24</p>
+<p class="nota" id="version" style="text-align:center;opacity:.6;margin:28px 0 18px">Versión v8 · 2026-11-24</p>
 
 <script src="config.js"></script>
 <script>
@@ -345,9 +345,15 @@
     limpiarPrevia();
     mostrarEstadoClip('Preparando el GIF…');
     try {
-      const { convertirClip } = await import('./clips.mjs');
-      gifClip = await convertirClip(video, Number(inicioClip.value), Number(duracionClip.value),
-        (cuadro, total, lado) => mostrarEstadoClip('Creando GIF · ' + cuadro + '/' + total + ' · ' + lado + ' px'));
+      const { convertirClip, convertirConReintento } = await import('./clips.mjs');
+      const inicio = Number(inicioClip.value);
+      const duracion = Number(duracionClip.value);
+      gifClip = await convertirConReintento((signal) => {
+        mostrarEstadoClip('Preparando el GIF…');
+        return convertirClip(video, inicio, duracion,
+          (cuadro, total, lado) => mostrarEstadoClip('Creando GIF · ' + cuadro + '/' + total + ' · ' + lado + ' px'),
+          signal);
+      }, () => mostrarEstadoClip('En pausa. Vuelve a la app para crear el GIF.'));
       previaClip.src = gifClip;
       previaClip.classList.remove('oculto');
       $('subirClip').classList.remove('oculto');
